@@ -1,0 +1,129 @@
+---
+title: 'Task 1: Spatial Data Viz'
+author: "Vanessa Rathbone"
+date: "2/19/2021"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(tmap)
+library(tmaptools)
+library(sf)
+library(leaflet)
+library(gstat)
+library(stars)
+```
+
+## California DFW Oil Spill Incident Tracking Interactive Map and Chloropleth Maps 
+
+**Data source:** California Department of Fish and Game, Office of Spill Prevention and Response (2008). Oil Spill Incident Tracking, 07/23/2008. Available at: https://map.dfg.ca.gov/metadata/ds0394.html.
+
+Summary
+The database system is designed to provide OSPR with quantified statistical data on oil spill response by OSPR field responders. The OSPR Incident Tracking Database System project was initiated to provide OSPR with oil spill incident data for statistical evaluation and justification for program planning, drills and exercise training and development, legislative analysis, budget preparation, to inform and educate the public and analyze OSPR's overall spill preparedness and response performance. An "incident", for purposes of this database, is "a discharge or threatened discharge of petroleum or other deleterious material into the waters of the state."
+
+Description
+The Office of Spill Prevention and Response (OSPR) Incident Tracking Database is a statewide oil spill tracking information system. The data are collected by OSPR Field Response Team members for Marine oil spills and by OSPR Inland Pollution Coordinators and Wardens for Inland incidents.
+
+### Read in the data and check CRS
+```{r}
+#read in the oil spill layer:
+ca_oil <- read_sf(here("data","ds394"), layer = "ds394") %>% 
+  clean_names()
+
+#check the projection
+st_crs(ca_oil) #NAD83 or 3310
+
+#read in the CA county data:
+ca_counties <- read_sf(here("data", "ca_counties"), layer = "CA_Counties_TIGER2016") %>% 
+  clean_names() %>% 
+  select(name)
+
+#check projection
+st_crs(ca_counties) #WGS 84 - not the same
+
+#make the same projections 
+ca_counties <- st_transform(ca_counties, st_crs(ca_oil))
+st_crs(ca_counties)
+
+plot(ca_counties)
+plot(ca_oil)
+
+#make a quick ggplot
+ggplot() +
+  geom_sf(data = ca_counties) +
+  geom_sf(data = ca_oil, aes(color = dfgcontrol))
+  
+  
+```
+### 1) Interactive map using tmap()
+```{r}
+
+#check for duplicates
+spill_duplicates <- ca_oil %>% 
+  get_dupes(latitude, longitude)
+
+spill_duplicates
+
+#get rid of dupes to avoid spatial variance problems
+ca_oil <- ca_oil %>% 
+  filter(!dfgcontrol %in% spill_duplicates$dfgcontrol)
+
+#double check for dupes
+ca_oil %>% 
+  get_dupes(latitude, longitude)
+
+#final interactive map showing the location of oil spill events included in the data
+tmap_mode("view")
+
+#tm_shape(ca_oil) +
+  #tm_dots("dfgcontrol")
+  
+#tm_shape(ca_oil) +
+  #tm_dots("localecoun")
+
+ca_oil_tmap <- tm_shape(ca_oil) +
+  tm_dots("specificlo") +
+  tmap_style("natural")
+
+ca_oil_tmap
+
+#tm_shape(ca_subset) +
+  #tm_fill("land_area", palette = "BuGn") +
+  #tm_shape(sesbania) +
+  #tm_dots() +
+  #save_tmap(ca_oil_tmap, filename = "ca_oil_tmap.jpg")
+
+```
+
+### 2) Static Choropleth Map of inland oil spill events by county
+```{r}
+
+#wrangle the data to only include count by county of inland oil spill events in 2008 
+ca_inland <- ca_oil %>% 
+  select(dfgcontrol, dateofinci, inlandmari, localecoun, latitude, longitude, geometry) %>% 
+  rename(date = dateofinci) %>% 
+  filter(inlandmari == "Inland") %>% 
+  count(localecoun)
+
+#use st_join to join spatial layers
+ca_join <- ca_counties %>% 
+  st_join(ca_inland)
+
+#make a chloropleth using the number of oil spills as the fill color per county:
+ggplot(data = ca_join) +
+  geom_sf(aes(fill = n), color = "white", size = 0.1) +
+  scale_fill_gradientn(colors = c("lightgray","orange","red")) +
+  theme_minimal() +
+  labs(fill = "Number of Oil Spills",
+       title = "Total number of oil spills per county in 2008 in California")
+
+
+```
+
