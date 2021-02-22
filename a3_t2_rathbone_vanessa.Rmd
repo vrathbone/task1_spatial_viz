@@ -2,29 +2,131 @@
 title: "a3_t2_rathbone_vanessa"
 author: "Vanessa Rathbone"
 date: "2/20/2021"
-output: html_document
+output: 
+  html_document:
+    code_folding: hide
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+
+library(raster) ### NOTE: attaching this BEFORE tidyverse
+library(tidyverse)
+library(here)
+library(sf)
+library(fasterize)
+library(rnaturalearth)
+library(sp)
+
 ```
 
-## R Markdown
+**Data** 
+AquaMaps (Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). AquaMaps: Predicted range maps for aquatic species. www.aquamaps.org), showing the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight.  The extent of the rasters is 125° W to 115°W (which R considers -125 to -115) and 32°N to 38°N.  
 
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+## Read in the data 
+```{r}
 
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+#check the world map data
+sp::plot(ne_countries())
 
-```{r cars}
-summary(cars)
+#now select for only united states:
+sp::plot(ne_countries(country = 'united states of america'))
+
+#bring in the world map
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+st_crs(world)
+
+
+#bring in the cetaceans 
+knitr::include_graphics(here('ca_cetaceans'))
+
+cetaceans_files <- list.files(path = 'ca_cetaceans', full.names = TRUE)
+
+cetaceans_stack <- raster::stack(cetaceans_files)
+
+plot(cetaceans_stack)
+                          
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r}
+#view cetaceans raster stack as a data frame and add 0.6 presence threshold. >= 0.6 equals presence. 
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+cetaceans_df <- raster::rasterToPoints(cetaceans_stack) %>% 
+  as.data.frame() %>%  #gives x and y coordinates
+  pivot_longer(`Balaenoptera_acutorostrata`:`Ziphius_cavirostris`,
+               names_to = "species", 
+               values_to = "presence") %>% 
+  #filter(presence == 1) %>% 
+  #group_by(x, y) %>% 
+  #count(presence)
+  
+#old code
+  #mutate(presence = case_when(presence >= .6 ~ 1,
+                              #presence <.6 ~ 0)) %>% 
+  
+
+cetaceans_df[is.na(cetaceans_df[])] <- 0
+
+#__
+
+is_cetaceans <- function(x, thresh = .6) {
+  y <- ifelse(x >= thresh, 1, NA)
+  return(y)
+}
+
+cetaceans_thresh <- calc(cetaceans_stack, fun = is_cetaceans)
+plot(cetaceans_thresh, col = 'green4')
+
+#turn it into a simple feature file to add geometry
+cetaceans_sf <- st_as_sf(cetaceans_df, coords = c("x", "y"))
+
+plot(cetaceans_sf)
+
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+```{r}
+
+#plot it
+
+ggplot(data = cetaceans_df, aes(x = x,y = y, fill = n))+
+  geom_raster() +
+  geom_raster(data = cetaceans_df, fill = 'blue')+
+  coord_sf(expand = 0)+ # tells it is the map 
+  scale_fill_gradient(low = 'black', high = 'white')+
+  theme_void()+
+  theme(panel.background = element_rect(fill = 'slateblue4'))
+
+
+ggplot() +
+geom_raster(data = cetaceans_df, x = x, y = y, fill = 'presence') +
+  geom_sf(data = world) +
+  coord_sf(expand = 0, xlim = c(125,115), ylim = c(32,38)) +
+  scale_fill_gradient(low = 'black', high = 'white') +
+  theme_void() +
+  theme(panel.background = element_rect(fill = 'slateblue4'))
+
+#-------------#
+
+ndvi_df <- raster::rasterToPoints(ndvi) %>%
+  as.data.frame()
+forest_df <- raster::rasterToPoints(forest) %>%
+  as.data.frame()
+
+ggplot(data = ndvi_df, aes(x = x, y = y, fill = layer)) +
+  geom_raster() +
+  geom_raster(data = forest_df, fill = 'green') +
+  coord_sf(expand = 0) +
+  scale_fill_gradient(low = 'black', high = 'white') +
+  theme_void() +
+  theme(panel.background = element_rect(fill = 'slateblue4'))
+
+```
+
+```{r}
+
+#but I did raster::stack to read in all of the files and then immediately made it into a data frame with rasterToPoints and then did pivot_longer and mutate case when (for the presence) and then I grouped by the geometry (x,y columns) and counted the presence column. Since the presence column had 1 if the probability was >= 0.6 and 0 if the probability was < 0.6. So, that should be a count by area/cell of the number of species that are present, right? And then I don't think I did anything different in the ggplot that would change the appearance/raster cell size.
+
+```
+
