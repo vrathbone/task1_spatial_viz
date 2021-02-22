@@ -26,19 +26,7 @@ AquaMaps (Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullande
 ## Read in the data 
 ```{r}
 
-#check the world map data
-sp::plot(ne_countries())
-
-#now select for only united states:
-sp::plot(ne_countries(country = 'united states of america'))
-
-#bring in the world map
-world <- ne_countries(scale = "medium", returnclass = "sf")
-
-st_crs(world)
-
-
-#bring in the cetaceans 
+###bring in the cetaceans 
 knitr::include_graphics(here('ca_cetaceans'))
 
 cetaceans_files <- list.files(path = 'ca_cetaceans', full.names = TRUE)
@@ -46,30 +34,29 @@ cetaceans_files <- list.files(path = 'ca_cetaceans', full.names = TRUE)
 cetaceans_stack <- raster::stack(cetaceans_files)
 
 plot(cetaceans_stack)
+
+###bring in the world map
+world <- ne_countries(scale = "medium", returnclass = "sf")
+
+#check the crs
+st_crs(world)
+
+#transform world to 
+world <- st_transform(world, st_crs(cetaceans_stack))
+st_crs(world)
+
+#check the world map data
+sp::plot(ne_countries())
+
+#now select for only united states just for fun
+sp::plot(ne_countries(country = 'united states of america'))
                           
 ```
 
 
 ```{r}
-#view cetaceans raster stack as a data frame and add 0.6 presence threshold. >= 0.6 equals presence. 
 
-cetaceans_df <- raster::rasterToPoints(cetaceans_stack) %>% 
-  as.data.frame() %>%  #gives x and y coordinates
-  pivot_longer(`Balaenoptera_acutorostrata`:`Ziphius_cavirostris`,
-               names_to = "species", 
-               values_to = "presence") %>% 
-  #filter(presence == 1) %>% 
-  #group_by(x, y) %>% 
-  #count(presence)
-  
-#old code
-  #mutate(presence = case_when(presence >= .6 ~ 1,
-                              #presence <.6 ~ 0)) %>% 
-  
-
-cetaceans_df[is.na(cetaceans_df[])] <- 0
-
-#__
+#create a function to set a presence threshold for anything above 0.6 to equal 1. 
 
 is_cetaceans <- function(x, thresh = .6) {
   y <- ifelse(x >= thresh, 1, NA)
@@ -79,48 +66,43 @@ is_cetaceans <- function(x, thresh = .6) {
 cetaceans_thresh <- calc(cetaceans_stack, fun = is_cetaceans)
 plot(cetaceans_thresh, col = 'green4')
 
-#turn it into a simple feature file to add geometry
-cetaceans_sf <- st_as_sf(cetaceans_df, coords = c("x", "y"))
+#view cetaceans raster stack as a data frame and add 0.6 presence threshold. >= 0.6 equals presence. 
 
-plot(cetaceans_sf)
+cetaceans_df <- raster::rasterToPoints(cetaceans_thresh) %>% 
+  as.data.frame() %>%  #gives x and y coordinates
+  pivot_longer(`Balaenoptera_acutorostrata`:`Ziphius_cavirostris`,
+               names_to = "species", 
+               values_to = "presence") %>% 
+  filter(presence == 1) %>% 
+  group_by(x, y) %>% 
+  count(presence)
+  
+#old code
+  #mutate(presence = case_when(presence >= .6 ~ 1,
+                              #presence <.6 ~ 0)) %>% 
+#cetaceans_df[is.na(cetaceans_df[])] <- 0
+
+#turn it into a simple feature file to add geometry
+#cetaceans_sf <- st_as_sf(cetaceans_df, coords = c("x", "y"))
+#plot(cetaceans_sf)
 
 ```
 
-```{r}
+```{r, fig = }
 
-#plot it
-
-ggplot(data = cetaceans_df, aes(x = x,y = y, fill = n))+
-  geom_raster() +
-  geom_raster(data = cetaceans_df, fill = 'blue')+
-  coord_sf(expand = 0)+ # tells it is the map 
-  scale_fill_gradient(low = 'black', high = 'white')+
-  theme_void()+
-  theme(panel.background = element_rect(fill = 'slateblue4'))
-
+#plot it with the world spatial data 
 
 ggplot() +
-geom_raster(data = cetaceans_df, x = x, y = y, fill = 'presence') +
+geom_raster(data = cetaceans_df, aes(x = x, y = y, fill = n)) +
   geom_sf(data = world) +
-  coord_sf(expand = 0, xlim = c(125,115), ylim = c(32,38)) +
-  scale_fill_gradient(low = 'black', high = 'white') +
+  coord_sf(expand = 0, xlim = c(-125,-115), ylim = c(32,38)) +
+  scale_fill_gradient(low = 'white', high = 'slateblue4') +
   theme_void() +
-  theme(panel.background = element_rect(fill = 'slateblue4'))
+  theme(panel.background = element_rect(fill = 'slateblue4')) +
+  labs(title = "Presence of 35 cetacean species in the California Bight",
+       subtitle = "Map by Vanessa Rathbone",
+       fill = "Number of Occurances")
 
-#-------------#
-
-ndvi_df <- raster::rasterToPoints(ndvi) %>%
-  as.data.frame()
-forest_df <- raster::rasterToPoints(forest) %>%
-  as.data.frame()
-
-ggplot(data = ndvi_df, aes(x = x, y = y, fill = layer)) +
-  geom_raster() +
-  geom_raster(data = forest_df, fill = 'green') +
-  coord_sf(expand = 0) +
-  scale_fill_gradient(low = 'black', high = 'white') +
-  theme_void() +
-  theme(panel.background = element_rect(fill = 'slateblue4'))
 
 ```
 
