@@ -180,9 +180,36 @@ summary {
 </div>
 
 
-<p><strong>Data</strong> AquaMaps (Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., &amp; Froese, R. (2016). AquaMaps: Predicted range maps for aquatic species. www.aquamaps.org), showing the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight. The extent of the rasters is 125° W to 115°W (which R considers -125 to -115) and 32°N to 38°N.</p>
+<p><strong>Summary:</strong> This data shows the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight.</p>
+<p><strong>Data Source:</strong> AquaMaps Team: Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., &amp; Froese, R. (2016). <a href="www.aquamaps.org">AquaMaps: Predicted range maps for aquatic species.</a></p>
 <div id="read-in-the-data" class="section level3">
 <h3>Read in the data</h3>
+<pre class="r"><code>###bring in the cetaceans 
+#knitr::include_graphics(here(&#39;ca_cetaceans&#39;))
+
+cetaceans_path &lt;- here(&quot;ca_cetaceans&quot;)
+
+cetaceans_files &lt;- list.files(cetaceans_path, full.names = TRUE)
+
+cetaceans_stack &lt;- raster::stack(cetaceans_files)
+
+#plot(cetaceans_stack)
+
+###bring in the world map
+world &lt;- ne_countries(scale = &quot;medium&quot;, returnclass = &quot;sf&quot;)
+
+#check the crs
+#st_crs(world)
+
+#transform world to 
+world &lt;- st_transform(world, st_crs(cetaceans_stack))
+#st_crs(world)
+
+#check the world map data
+#sp::plot(ne_countries())
+
+#now select for only united states just for fun
+#sp::plot(ne_countries(country = &#39;united states of america&#39;))</code></pre>
 </div>
 <div id="set-a-presence-threshold-and-create-a-dataframe" class="section level3">
 <h3>Set a presence threshold and create a dataframe</h3>

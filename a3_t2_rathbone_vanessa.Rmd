@@ -22,40 +22,43 @@ library(ggspatial)
 
 ```
 
-**Data Source:** AquaMaps Team: Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). [AquaMaps: Predicted range maps for aquatic species.](www.aquamaps.org)
-
-Summary:
+**Summary:**
 This data shows the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight.  
+
+**Data Source:** AquaMaps Team: Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). [AquaMaps: Predicted range maps for aquatic species.](www.aquamaps.org)
 
 ### Read in the data 
 ```{r}
 
 ###bring in the cetaceans 
-knitr::include_graphics(here('ca_cetaceans'))
+#knitr::include_graphics(here('ca_cetaceans'))
 
-cetaceans_files <- list.files(path = 'ca_cetaceans', full.names = TRUE)
+cetaceans_path <- here("ca_cetaceans")
+
+cetaceans_files <- list.files(cetaceans_path, full.names = TRUE)
 
 cetaceans_stack <- raster::stack(cetaceans_files)
 
-plot(cetaceans_stack)
+#plot(cetaceans_stack)
 
 ###bring in the world map
 world <- ne_countries(scale = "medium", returnclass = "sf")
 
 #check the crs
-st_crs(world)
+#st_crs(world)
 
 #transform world to 
 world <- st_transform(world, st_crs(cetaceans_stack))
-st_crs(world)
+#st_crs(world)
 
 #check the world map data
-sp::plot(ne_countries())
+#sp::plot(ne_countries())
 
 #now select for only united states just for fun
-sp::plot(ne_countries(country = 'united states of america'))
+#sp::plot(ne_countries(country = 'united states of america'))
                           
 ```
+
 
 ### Set a presence threshold and create a dataframe
 ```{r}
@@ -91,6 +94,8 @@ cetaceans_df <- raster::rasterToPoints(cetaceans_thresh) %>%
 #plot(cetaceans_sf)
 
 ```
+
+
 ### Create a static species presence map
 ```{r, fig.cap="*Figure 1. Presence data for 35 cetacean species in the California Bight with a presence threshold of 0.6. This data is from AquaMaps predicted range maps.*"}
 

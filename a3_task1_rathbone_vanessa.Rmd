@@ -23,22 +23,22 @@ library(stars)
 
 ## California DFW Oil Spill Incident Tracking Interactive Map and Chloropleth Maps 
 
-**Data source:** California Department of Fish and Game, Office of Spill Prevention and Response (2008). [Oil Spill Incident Tracking, 07/23/2008.](https://map.dfg.ca.gov/metadata/ds0394.html)
-
-Summary:
+**Summary:**
 The database system is designed to provide OSPR with quantified statistical data on oil spill response by OSPR field responders. The OSPR Incident Tracking Database System project was initiated to provide OSPR with oil spill incident data for statistical evaluation and justification for program planning, drills and exercise training and development, legislative analysis, budget preparation, to inform and educate the public and analyze OSPR's overall spill preparedness and response performance. An "incident", for purposes of this database, is "a discharge or threatened discharge of petroleum or other deleterious material into the waters of the state."
 
-Description:
+**Description:**
 The Office of Spill Prevention and Response (OSPR) Incident Tracking Database is a statewide oil spill tracking information system. The data are collected by OSPR Field Response Team members for Marine oil spills and by OSPR Inland Pollution Coordinators and Wardens for Inland incidents.
 
+**Data source:** California Department of Fish and Game, Office of Spill Prevention and Response (2008). [Oil Spill Incident Tracking, 07/23/2008.](https://map.dfg.ca.gov/metadata/ds0394.html)
+
 ### Read in the data and check CRS
-```{r}
+```{r, message = FALSE}
 #read in the oil spill layer:
 ca_oil <- read_sf(here("data","ds394"), layer = "ds394") %>% 
   clean_names()
 
 #check the projection
-st_crs(ca_oil) #NAD83 or 3310
+#st_crs(ca_oil) #NAD83 or 3310
 
 #read in the CA county data:
 ca_counties <- read_sf(here("data", "ca_counties"), layer = "CA_Counties_TIGER2016") %>% 
@@ -46,25 +46,25 @@ ca_counties <- read_sf(here("data", "ca_counties"), layer = "CA_Counties_TIGER20
   select(name)
 
 #check projection
-st_crs(ca_counties) #WGS 84 - not the same
+#st_crs(ca_counties) #WGS 84 - not the same
 
 #make the same projections 
 ca_counties <- st_transform(ca_counties, st_crs(ca_oil))
-st_crs(ca_counties)
+#st_crs(ca_counties)
 
-plot(ca_counties)
-plot(ca_oil)
+# plot(ca_counties)
+# plot(ca_oil)
 
 #make a quick ggplot
-ggplot() +
-  geom_sf(data = ca_counties) +
-  geom_sf(data = ca_oil, aes(color = dfgcontrol))
+# ggplot() +
+#   geom_sf(data = ca_counties) +
+#   geom_sf(data = ca_oil, aes(color = dfgcontrol))
   
   
 ```
 
-### 1) Interactive map using tmap()
-```{r, fig.cap="*Figure 1. Interactive map of oil spills captured by the California Department of Fish and Wildlife Oil Spill Incident Tracking.*"}
+### 1) Interactive map using tmap() showing the oil spills per oil well in California. 
+```{r, message = FALSE, include = FALSE}
 
 #check for duplicates
 spill_duplicates <- ca_oil %>% 
@@ -79,6 +79,11 @@ ca_oil <- ca_oil %>%
 #double check for dupes
 ca_oil %>% 
   get_dupes(latitude, longitude)
+
+```
+
+
+```{r}
 
 #final interactive map showing the location of oil spill events included in the data
 tmap_mode("view")
@@ -101,6 +106,7 @@ ca_oil_tmap
   #save_tmap(ca_oil_tmap, filename = "ca_oil_tmap.jpg")
 
 ```
+*Figure 1. Interactive map of oil spills per well captured by the California Department of Fish and Wildlife Oil Spill Incident Tracking. Specifically, showing the location broken out by fresh water, land or marine locations.*
 
 ### 2) Static Chloropleth Map of inland oil spill events by county
 ```{r, fig.cap="*Figure 2. Chloropleth map of only inland oil spill events by country.*"}
