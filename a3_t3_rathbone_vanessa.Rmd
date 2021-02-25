@@ -1,0 +1,114 @@
+---
+title: "Task 3: Text Analysis"
+author: "Vanessa Rathbone"
+date: "2/21/2021"
+output: 
+  html_document:
+    code_folding: hide
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytext)
+library(textdata)
+library(pdftools)
+library(ggwordcloud)
+```
+
+```{r, cache = TRUE, include = FALSE}
+
+#### Get Superbad script
+#add cache = TRUE won't reread this code chunk everytime you knit
+superbad_text <- pdf_text("Superbad_Full_Script.pdf")
+
+#check out any page 
+superbad_p34 <- superbad_text[34]
+superbad_p34
+
+```
+
+### Top 100 most use words in the Superbad script
+```{r, message = FALSE}
+
+#DISCLAIMER: Bad language was used in this movie. 
+
+#basic tidying
+superbad_tidy <- data.frame(superbad_text) %>% 
+  mutate(text_full = str_split(superbad_text, pattern = "\\n")) %>% 
+  unnest(text_full) %>% 
+  mutate(text_full = str_trim(text_full))
+
+# Tidy to get word counts
+superbad_tokens <- superbad_tidy %>% 
+  unnest_tokens(word, text_full) %>%
+  select(-superbad_text)
+
+# Get rid of unimportant words
+superbad_nonstop_words <- superbad_tokens %>%
+  anti_join(stop_words)
+
+# Get word count; eliminate errors, keep top 100
+nonstop_counts <- superbad_nonstop_words %>%
+  count(word) %>%
+  arrange(-n) %>%
+  slice(-c(1:15, 21, 22, 32, 38, 41, 42, 60, 61, 71, 88, 94, 123, 138, 142, 143)) %>% 
+  head(100)
+
+# Create a word cloud
+ggplot(data = nonstop_counts, aes(label = word)) +
+  geom_text_wordcloud(aes(color = n, size = n)) +
+  scale_size_area(max_size = 5) +
+  theme_minimal()
+         
+```
+
+### Sentiment analysis for the Superbad script
+```{r, message = FALSE}
+
+# # Get sentiments of top 100 words
+# superbad_nrc_100 <- nonstop_counts %>% 
+#   inner_join(get_sentiments("nrc"))
+# 
+# # Count the sentiments for the top 100 words
+# superbad_nrc_counts_100 <- superbad_nrc_100 %>% 
+#   count(sentiment) %>% 
+#   mutate(name = fct_reorder(sentiment, desc(-n)))
+# 
+# # Plot the sentiments
+# ggplot(data = superbad_nrc_counts_100, aes(x = name, y = n, order = n)) +
+#   geom_col() +
+#   coord_flip() +
+#   labs(title = "Superbad Script",
+#        subtitle = "Sentiment Analysis",
+#        y = "Count",
+#        x = "Sentiment") +
+#   theme_light() +
+#   scale_x_discrete(expand = c(0, 0)) +
+#   scale_y_continuous(expand = c(0, 0))
+
+
+# Get sentiments of words
+superbad_nrc <- superbad_nonstop_words %>% 
+  inner_join(get_sentiments("nrc"))
+
+# Count the sentiments
+superbad_nrc_counts <- superbad_nrc %>% 
+  count(sentiment) %>% 
+  mutate(name = fct_reorder(sentiment, desc(-n)))
+
+# Plot the sentiments for all words
+ggplot(data = superbad_nrc_counts, aes(x = name, y = n, order = n)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Superbad Script",
+       subtitle = "Sentiment Analysis",
+       y = "Count",
+       x = "Sentiment") +
+  theme_light() +
+  scale_x_discrete(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0))
+
+
+```

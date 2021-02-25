@@ -1,10 +1,11 @@
 ---
-title: "a3_t2_rathbone_vanessa"
+title: "Task 2: Rasters"
 author: "Vanessa Rathbone"
 date: "2/20/2021"
 output: 
   html_document:
     code_folding: hide
+    theme: spacelab
 ---
 
 ```{r setup, include=FALSE}
@@ -17,13 +18,16 @@ library(sf)
 library(fasterize)
 library(rnaturalearth)
 library(sp)
+library(ggspatial)
 
 ```
 
-**Data** 
-AquaMaps (Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). AquaMaps: Predicted range maps for aquatic species. www.aquamaps.org), showing the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight.  The extent of the rasters is 125° W to 115°W (which R considers -125 to -115) and 32°N to 38°N.  
+**Data Source:** AquaMaps Team: Kaschner, K., Rius-Barile, J., Kesner-Reyes, K., Garilao, C., Kullander, S., Rees, T., & Froese, R. (2016). [AquaMaps: Predicted range maps for aquatic species.](www.aquamaps.org)
 
-## Read in the data 
+Summary:
+This data shows the probability of occurrence (based on relative environmental suitability, including species preferences for water temperature, depth, salinity, and distance to land) of 35 cetacean species that can be found in the California Bight.  
+
+### Read in the data 
 ```{r}
 
 ###bring in the cetaceans 
@@ -53,10 +57,10 @@ sp::plot(ne_countries(country = 'united states of america'))
                           
 ```
 
-
+### Set a presence threshold and create a dataframe
 ```{r}
 
-#create a function to set a presence threshold for anything above 0.6 to equal 1. 
+#create a function to set a presence threshold for anything above 0.6 to equal 1.
 
 is_cetaceans <- function(x, thresh = .6) {
   y <- ifelse(x >= thresh, 1, NA)
@@ -77,18 +81,18 @@ cetaceans_df <- raster::rasterToPoints(cetaceans_thresh) %>%
   group_by(x, y) %>% 
   count(presence)
   
-#old code
-  #mutate(presence = case_when(presence >= .6 ~ 1,
+###old code###
+
+#mutate(presence = case_when(presence >= .6 ~ 1,
                               #presence <.6 ~ 0)) %>% 
 #cetaceans_df[is.na(cetaceans_df[])] <- 0
-
 #turn it into a simple feature file to add geometry
 #cetaceans_sf <- st_as_sf(cetaceans_df, coords = c("x", "y"))
 #plot(cetaceans_sf)
 
 ```
-
-```{r, fig = }
+### Create a static species presence map
+```{r, fig.cap="*Figure 1. Presence data for 35 cetacean species in the California Bight with a presence threshold of 0.6. This data is from AquaMaps predicted range maps.*"}
 
 #plot it with the world spatial data 
 
@@ -101,14 +105,12 @@ geom_raster(data = cetaceans_df, aes(x = x, y = y, fill = n)) +
   theme(panel.background = element_rect(fill = 'slateblue4')) +
   labs(title = "Presence of 35 cetacean species in the California Bight",
        subtitle = "Map by Vanessa Rathbone",
-       fill = "Number of Occurances")
+       fill = "Number of Occurances") +
+  annotation_north_arrow(aes(location = "br")) +
+  annotation_scale(aes(location = "tr"))
 
 
 ```
 
-```{r}
 
-#but I did raster::stack to read in all of the files and then immediately made it into a data frame with rasterToPoints and then did pivot_longer and mutate case when (for the presence) and then I grouped by the geometry (x,y columns) and counted the presence column. Since the presence column had 1 if the probability was >= 0.6 and 0 if the probability was < 0.6. So, that should be a count by area/cell of the number of species that are present, right? And then I don't think I did anything different in the ggplot that would change the appearance/raster cell size.
-
-```
 

@@ -23,12 +23,12 @@ library(stars)
 
 ## California DFW Oil Spill Incident Tracking Interactive Map and Chloropleth Maps 
 
-**Data source:** California Department of Fish and Game, Office of Spill Prevention and Response (2008). Oil Spill Incident Tracking, 07/23/2008. Available at: https://map.dfg.ca.gov/metadata/ds0394.html.
+**Data source:** California Department of Fish and Game, Office of Spill Prevention and Response (2008). [Oil Spill Incident Tracking, 07/23/2008.](https://map.dfg.ca.gov/metadata/ds0394.html)
 
-Summary
+Summary:
 The database system is designed to provide OSPR with quantified statistical data on oil spill response by OSPR field responders. The OSPR Incident Tracking Database System project was initiated to provide OSPR with oil spill incident data for statistical evaluation and justification for program planning, drills and exercise training and development, legislative analysis, budget preparation, to inform and educate the public and analyze OSPR's overall spill preparedness and response performance. An "incident", for purposes of this database, is "a discharge or threatened discharge of petroleum or other deleterious material into the waters of the state."
 
-Description
+Description:
 The Office of Spill Prevention and Response (OSPR) Incident Tracking Database is a statewide oil spill tracking information system. The data are collected by OSPR Field Response Team members for Marine oil spills and by OSPR Inland Pollution Coordinators and Wardens for Inland incidents.
 
 ### Read in the data and check CRS
@@ -62,8 +62,9 @@ ggplot() +
   
   
 ```
+
 ### 1) Interactive map using tmap()
-```{r}
+```{r, fig.cap="*Figure 1. Interactive map of oil spills captured by the California Department of Fish and Wildlife Oil Spill Incident Tracking.*"}
 
 #check for duplicates
 spill_duplicates <- ca_oil %>% 
@@ -89,8 +90,7 @@ tmap_mode("view")
   #tm_dots("localecoun")
 
 ca_oil_tmap <- tm_shape(ca_oil) +
-  tm_dots("specificlo") +
-  tmap_style("natural")
+  tm_dots("specificlo")
 
 ca_oil_tmap
 
@@ -102,8 +102,8 @@ ca_oil_tmap
 
 ```
 
-### 2) Static Choropleth Map of inland oil spill events by county
-```{r}
+### 2) Static Chloropleth Map of inland oil spill events by county
+```{r, fig.cap="*Figure 2. Chloropleth map of only inland oil spill events by country.*"}
 
 #wrangle the data to only include count by county of inland oil spill events in 2008 
 ca_inland <- ca_oil %>% 
